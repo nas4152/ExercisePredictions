@@ -1,0 +1,112 @@
+---
+title: "Exercise prediction"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Import Data
+
+
+```{r import}
+trainURL <- url("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv")
+training <- read.csv(trainURL)
+valURL <- url("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv")
+validation <- read.csv(valURL)
+library(caret)
+library(dplyr)
+```
+
+Removed index column and user_name, matching colname for class in training and problem id in testing
+not the same - problem id used as placeholder for later class predictions 
+```{r reformat}
+training <- select(training, -X, -user_name)
+validation <- select(validation, -X, -user_name)
+validation <- rename(validation, classe = problem_id)
+```
+
+Create a training set and test set to test different models before using the validation set.   
+```{r data partition}
+inTrain <- createDataPartition(y = training$classe, p = 0.7, list = FALSE)
+training <- training[inTrain, ]
+testing <- training[ - inTrain, ]
+```
+
+In training set, most variables had 0 NA values, while several variables were NA for 13462 cases out of 13737 total.
+As this left approximately 2% of the cases with non-NA values, these variables were dropped. 
+(all variables were either 0 NAs or 13462, so this was done by keeping variables that had no NAs in the train set)
+```{r na}
+training <- training[ ,colSums(is.na(training))==0]
+testing <- select(testing, one_of(colnames(training)))
+validation <- select(validation, one_of(colnames(training)))
+```
+
+Decided to remove nearZeroVariance predictors to focus on predictors more likely to facilitate model fit.  Saved as 
+seperate dataframe in case more predictors needed (starting with predictors that would not require transformations).
+
+```{r nearZeroVar}
+nzv <- nearZeroVar(training)
+filterTraining <- training[ , -nzv]
+filterTesting <- testing[ , -nzv]
+filterValidation <- validation[ , -nzv]
+```
+
+
+##Set up parallel, train control
+```{r parallel}
+library(parallel)
+library(doParallel)
+mycluster <- makeCluster(detectCores() - 1) 
+registerDoParallel(mycluster)
+```
+
+```{r train control}
+
+fitControl <- trainControl(method = "cv",
+                           number = 10,
+                           allowParallel = TRUE)
+```
+
+##Trees
+```{r rpart}
+set.seed(457)
+rpartModel <- train(classe~ ., data = filterTraining, method ="rpart", trControl = fitControl)
+```
+
+
+```{r rf}
+set.seed(13337)
+rfModel <- train(classe~ ., data = filterTraining, method ="rf", trControl = fitControl)
+
+```
+##LDA
+
+```{r lda}
+set.seed(42)
+ldaModel <- train(classe ~ ., data = filterTraining, method = "lda", trcontrol = fitControl)
+```
+
+
+##Boosted Trees
+```{r gbm}
+set.seed(913)
+gbmModel <- train(classe ~ ., data = as.data.frame(filterTraining), method = "gbm", verbose = FALSE)
+```
+##Predictions and accuracy tests
+
+```{r predictions}
+rpartPredict <- predict(rpartModel, filterTesting)
+rfPredict <- predict(rfModel, filterTesting)
+ldaPredict <- predict(ldaModel, filterTesting)
+gbmPredict <- predict(gbmModel, filterTesting)
+
+```
+
+```{r accuracy}
+confusionMatrix(rpartPredict, filterTesting$classe)
+confusionMatrix(rfPredict, filterTesting$classe)
+confusionMatrix(ldaPredict, filterTesting$classe)
+confusionMatrix(gbmPredict, filterTesting$classe)
+```
