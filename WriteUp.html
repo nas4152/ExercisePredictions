@@ -131,21 +131,8 @@ $(document).ready(function () {
 training &lt;- read.csv(trainURL)
 valURL &lt;- url(&quot;https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv&quot;)
 validation &lt;- read.csv(valURL)
-library(caret)</code></pre>
-<pre><code>## Warning: package 'caret' was built under R version 3.3.2</code></pre>
-<pre><code>## Loading required package: lattice</code></pre>
-<pre><code>## Loading required package: ggplot2</code></pre>
-<pre><code>## Warning: package 'ggplot2' was built under R version 3.3.2</code></pre>
-<pre class="r"><code>library(dplyr)</code></pre>
-<pre><code>## Warning: package 'dplyr' was built under R version 3.3.2</code></pre>
-<pre><code>## 
-## Attaching package: 'dplyr'</code></pre>
-<pre><code>## The following objects are masked from 'package:stats':
-## 
-##     filter, lag</code></pre>
-<pre><code>## The following objects are masked from 'package:base':
-## 
-##     intersect, setdiff, setequal, union</code></pre>
+library(caret)
+library(dplyr)</code></pre>
 <p>The index and username columns were removed. As the validation set did not have a “classe” result column, the problem id was used as a placeholder to keep column names consistent.</p>
 <pre class="r"><code>training &lt;- select(training, -X, -user_name)
 validation &lt;- select(validation, -X, -user_name)
@@ -168,13 +155,8 @@ filterValidation &lt;- validation[ , -nzv]</code></pre>
 <h2>Performance optimization</h2>
 <p>The following code sets up parallel processing and a cross validation control for model training (as opposed to the more computationally heavy default bootstrap) in order to help run the code faster.</p>
 <pre class="r"><code>library(parallel)
-library(doParallel)</code></pre>
-<pre><code>## Warning: package 'doParallel' was built under R version 3.3.2</code></pre>
-<pre><code>## Loading required package: foreach</code></pre>
-<pre><code>## Warning: package 'foreach' was built under R version 3.3.2</code></pre>
-<pre><code>## Loading required package: iterators</code></pre>
-<pre><code>## Warning: package 'iterators' was built under R version 3.3.2</code></pre>
-<pre class="r"><code>mycluster &lt;- makeCluster(detectCores() - 1) 
+library(doParallel)
+mycluster &lt;- makeCluster(detectCores() - 1) 
 registerDoParallel(mycluster)</code></pre>
 <pre class="r"><code>fitControl &lt;- trainControl(method = &quot;cv&quot;,
                            number = 10,
@@ -186,18 +168,6 @@ registerDoParallel(mycluster)</code></pre>
 <p>The final model selected was a random forest model based on the filtered training set with all variables with missing values, zero variance or near zero variance and trained using cross-validation with 10 folds.</p>
 <pre class="r"><code>set.seed(13337)
 rfModel &lt;- train(classe~ ., data = filterTraining, method =&quot;rf&quot;, trControl = fitControl)</code></pre>
-<pre><code>## Loading required package: randomForest</code></pre>
-<pre><code>## Warning: package 'randomForest' was built under R version 3.3.2</code></pre>
-<pre><code>## randomForest 4.6-12</code></pre>
-<pre><code>## Type rfNews() to see new features/changes/bug fixes.</code></pre>
-<pre><code>## 
-## Attaching package: 'randomForest'</code></pre>
-<pre><code>## The following object is masked from 'package:dplyr':
-## 
-##     combine</code></pre>
-<pre><code>## The following object is masked from 'package:ggplot2':
-## 
-##     margin</code></pre>
 <p>As can be seen in the following confusion matrix, this model perfectly predicted the test set (the 30% data split set aside from the “training” csv in order to compare model performance).</p>
 <pre class="r"><code>rfPredict &lt;- predict(rfModel, filterTesting)
 confusionMatrix(rfPredict, filterTesting$classe)</code></pre>
@@ -205,17 +175,17 @@ confusionMatrix(rfPredict, filterTesting$classe)</code></pre>
 ## 
 ##           Reference
 ## Prediction    A    B    C    D    E
-##          A 1148    0    0    0    0
-##          B    0  833    0    0    0
-##          C    0    0  715    0    0
-##          D    0    0    0  658    0
-##          E    0    0    0    0  760
+##          A 1160    0    0    0    0
+##          B    0  792    0    0    0
+##          C    0    0  732    0    0
+##          D    0    0    0  701    0
+##          E    0    0    0    0  747
 ## 
 ## Overall Statistics
 ##                                      
 ##                Accuracy : 1          
 ##                  95% CI : (0.9991, 1)
-##     No Information Rate : 0.279      
+##     No Information Rate : 0.2807     
 ##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16  
 ##                                      
 ##                   Kappa : 1          
@@ -224,14 +194,14 @@ confusionMatrix(rfPredict, filterTesting$classe)</code></pre>
 ## Statistics by Class:
 ## 
 ##                      Class: A Class: B Class: C Class: D Class: E
-## Sensitivity             1.000   1.0000   1.0000   1.0000   1.0000
-## Specificity             1.000   1.0000   1.0000   1.0000   1.0000
-## Pos Pred Value          1.000   1.0000   1.0000   1.0000   1.0000
-## Neg Pred Value          1.000   1.0000   1.0000   1.0000   1.0000
-## Prevalence              0.279   0.2025   0.1738   0.1599   0.1847
-## Detection Rate          0.279   0.2025   0.1738   0.1599   0.1847
-## Detection Prevalence    0.279   0.2025   0.1738   0.1599   0.1847
-## Balanced Accuracy       1.000   1.0000   1.0000   1.0000   1.0000</code></pre>
+## Sensitivity            1.0000   1.0000   1.0000   1.0000   1.0000
+## Specificity            1.0000   1.0000   1.0000   1.0000   1.0000
+## Pos Pred Value         1.0000   1.0000   1.0000   1.0000   1.0000
+## Neg Pred Value         1.0000   1.0000   1.0000   1.0000   1.0000
+## Prevalence             0.2807   0.1917   0.1772   0.1697   0.1808
+## Detection Rate         0.2807   0.1917   0.1772   0.1697   0.1808
+## Detection Prevalence   0.2807   0.1917   0.1772   0.1697   0.1808
+## Balanced Accuracy      1.0000   1.0000   1.0000   1.0000   1.0000</code></pre>
 <p>This model was then used to predict the validation set (derived from the “testing” csv). When submitted all predicted classe values matched the actual values (not shown).</p>
 <pre class="r"><code>quizPredict &lt;- predict(rfModel, validation)
 quizPredict</code></pre>
@@ -243,42 +213,13 @@ quizPredict</code></pre>
 <p>Several models were tested before the final model was selected based on the highest out of sample prediciton accuracy. Models to be tested were selected based on their usefulness in predicting categorical variables (ie a simple lm model would not be ideal) and avoiding highly computationally demanding models (ie lasso models) that would not be ideal if a less demanding model could accurately predict the outcome.</p>
 <p>The models tested were a single classification tree using rpart (more of a baseline than an expected contender), a linear descriminate analysis model using lda, a boosted tree model from gbm and the random forest model described above. All models were built with the same cross validation and filtered training set under the caret package.</p>
 <pre class="r"><code>set.seed(457)
-rpartModel &lt;- train(classe~ ., data = filterTraining, method =&quot;rpart&quot;, trControl = fitControl)</code></pre>
-<pre><code>## Loading required package: rpart</code></pre>
-<pre class="r"><code>set.seed(42)
-ldaModel &lt;- train(classe ~ ., data = filterTraining, method = &quot;lda&quot;, trcontrol = fitControl)</code></pre>
-<pre><code>## Loading required package: MASS</code></pre>
-<pre><code>## 
-## Attaching package: 'MASS'</code></pre>
-<pre><code>## The following object is masked from 'package:dplyr':
-## 
-##     select</code></pre>
-<pre><code>## Warning in lda.default(x, grouping, ...): variables are collinear</code></pre>
-<pre class="r"><code>set.seed(913)
+rpartModel &lt;- train(classe~ ., data = filterTraining, method =&quot;rpart&quot;, trControl = fitControl)
+
+set.seed(42)
+ldaModel &lt;- train(classe ~ ., data = filterTraining, method = &quot;lda&quot;, trcontrol = fitControl)
+
+set.seed(913)
 gbmModel &lt;- train(classe ~ ., data = as.data.frame(filterTraining), method = &quot;gbm&quot;, verbose = FALSE)</code></pre>
-<pre><code>## Loading required package: gbm</code></pre>
-<pre><code>## Warning: package 'gbm' was built under R version 3.3.2</code></pre>
-<pre><code>## Loading required package: survival</code></pre>
-<pre><code>## Warning: package 'survival' was built under R version 3.3.2</code></pre>
-<pre><code>## 
-## Attaching package: 'survival'</code></pre>
-<pre><code>## The following object is masked from 'package:caret':
-## 
-##     cluster</code></pre>
-<pre><code>## Loading required package: splines</code></pre>
-<pre><code>## Loaded gbm 2.1.1</code></pre>
-<pre><code>## Loading required package: plyr</code></pre>
-<pre><code>## -------------------------------------------------------------------------</code></pre>
-<pre><code>## You have loaded plyr after dplyr - this is likely to cause problems.
-## If you need functions from both plyr and dplyr, please load plyr first, then dplyr:
-## library(plyr); library(dplyr)</code></pre>
-<pre><code>## -------------------------------------------------------------------------</code></pre>
-<pre><code>## 
-## Attaching package: 'plyr'</code></pre>
-<pre><code>## The following objects are masked from 'package:dplyr':
-## 
-##     arrange, count, desc, failwith, id, mutate, rename, summarise,
-##     summarize</code></pre>
 </div>
 <div id="predictions-and-accuracy-from-other-models" class="section level2">
 <h2>Predictions and accuracy from other models</h2>
@@ -291,97 +232,97 @@ gbmPredict &lt;- predict(gbmModel, filterTesting)</code></pre>
 ## 
 ##           Reference
 ## Prediction   A   B   C   D   E
-##          A 798  94   0   0   0
-##          B 169 348 102 225  65
-##          C 179 391 613 433 330
-##          D   0   0   0   0   0
-##          E   2   0   0   0 365
+##          A 859 161  19  21   8
+##          B 144 458   7   0   0
+##          C   7  37 397  18  46
+##          D 145 136 309 662 371
+##          E   5   0   0   0 322
 ## 
 ## Overall Statistics
 ##                                           
-##                Accuracy : 0.5163          
-##                  95% CI : (0.5009, 0.5317)
-##     No Information Rate : 0.279           
+##                Accuracy : 0.653           
+##                  95% CI : (0.6382, 0.6675)
+##     No Information Rate : 0.2807          
 ##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
 ##                                           
-##                   Kappa : 0.3924          
+##                   Kappa : 0.5643          
 ##  Mcnemar's Test P-Value : NA              
 ## 
 ## Statistics by Class:
 ## 
 ##                      Class: A Class: B Class: C Class: D Class: E
-## Sensitivity            0.6951  0.41777   0.8573   0.0000  0.48026
-## Specificity            0.9683  0.82902   0.6078   1.0000  0.99940
-## Pos Pred Value         0.8946  0.38284   0.3150      NaN  0.99455
-## Neg Pred Value         0.8914  0.84867   0.9530   0.8401  0.89458
-## Prevalence             0.2790  0.20248   0.1738   0.1599  0.18474
-## Detection Rate         0.1940  0.08459   0.1490   0.0000  0.08872
-## Detection Prevalence   0.2168  0.22095   0.4730   0.0000  0.08921
-## Balanced Accuracy      0.8317  0.62339   0.7326   0.5000  0.73983</code></pre>
+## Sensitivity            0.7405   0.5783  0.54235   0.9444  0.43106
+## Specificity            0.9297   0.9548  0.96824   0.7199  0.99852
+## Pos Pred Value         0.8043   0.7521  0.78614   0.4079  0.98471
+## Neg Pred Value         0.9018   0.9052  0.90764   0.9845  0.88830
+## Prevalence             0.2807   0.1917  0.17715   0.1697  0.18078
+## Detection Rate         0.2079   0.1108  0.09608   0.1602  0.07793
+## Detection Prevalence   0.2585   0.1474  0.12222   0.3928  0.07914
+## Balanced Accuracy      0.8351   0.7665  0.75529   0.8321  0.71479</code></pre>
 <pre class="r"><code>confusionMatrix(ldaPredict, filterTesting$classe)</code></pre>
 <pre><code>## Confusion Matrix and Statistics
 ## 
 ##           Reference
 ## Prediction    A    B    C    D    E
-##          A 1048  101    2    0    0
-##          B   85  610   68    0    0
-##          C   15  119  631   66    3
-##          D    0    3   13  553   62
-##          E    0    0    1   39  695
+##          A 1057   89    0    0    0
+##          B   92  592   60    1    0
+##          C   11  103  646   82    2
+##          D    0    8   24  581   72
+##          E    0    0    2   37  673
 ## 
 ## Overall Statistics
 ##                                           
-##                Accuracy : 0.8597          
-##                  95% CI : (0.8488, 0.8702)
-##     No Information Rate : 0.279           
+##                Accuracy : 0.8589          
+##                  95% CI : (0.8479, 0.8694)
+##     No Information Rate : 0.2807          
 ##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
 ##                                           
-##                   Kappa : 0.8228          
+##                   Kappa : 0.8219          
 ##  Mcnemar's Test P-Value : NA              
 ## 
 ## Statistics by Class:
 ## 
 ##                      Class: A Class: B Class: C Class: D Class: E
-## Sensitivity            0.9129   0.7323   0.8825   0.8404   0.9145
-## Specificity            0.9653   0.9534   0.9403   0.9774   0.9881
-## Pos Pred Value         0.9105   0.7995   0.7566   0.8764   0.9456
-## Neg Pred Value         0.9663   0.9335   0.9744   0.9699   0.9808
-## Prevalence             0.2790   0.2025   0.1738   0.1599   0.1847
-## Detection Rate         0.2547   0.1483   0.1534   0.1344   0.1689
-## Detection Prevalence   0.2798   0.1855   0.2027   0.1534   0.1787
-## Balanced Accuracy      0.9391   0.8428   0.9114   0.9089   0.9513</code></pre>
+## Sensitivity            0.9112   0.7475   0.8825   0.8288   0.9009
+## Specificity            0.9701   0.9542   0.9418   0.9697   0.9885
+## Pos Pred Value         0.9223   0.7946   0.7654   0.8482   0.9452
+## Neg Pred Value         0.9655   0.9410   0.9738   0.9652   0.9784
+## Prevalence             0.2807   0.1917   0.1772   0.1697   0.1808
+## Detection Rate         0.2558   0.1433   0.1563   0.1406   0.1629
+## Detection Prevalence   0.2773   0.1803   0.2043   0.1658   0.1723
+## Balanced Accuracy      0.9406   0.8508   0.9121   0.8993   0.9447</code></pre>
 <pre class="r"><code>confusionMatrix(gbmPredict, filterTesting$classe)</code></pre>
 <pre><code>## Confusion Matrix and Statistics
 ## 
 ##           Reference
 ## Prediction    A    B    C    D    E
-##          A 1148    1    0    0    0
-##          B    0  831    0    0    0
-##          C    0    0  713    0    0
-##          D    0    1    2  655    1
-##          E    0    0    0    3  759
+##          A 1160    0    0    0    0
+##          B    0  789    1    0    0
+##          C    0    2  730    0    0
+##          D    0    1    1  700    0
+##          E    0    0    0    1  747
 ## 
 ## Overall Statistics
 ##                                           
-##                Accuracy : 0.9981          
-##                  95% CI : (0.9962, 0.9992)
-##     No Information Rate : 0.279           
+##                Accuracy : 0.9985          
+##                  95% CI : (0.9968, 0.9995)
+##     No Information Rate : 0.2807          
 ##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
 ##                                           
-##                   Kappa : 0.9975          
+##                   Kappa : 0.9982          
 ##  Mcnemar's Test P-Value : NA              
 ## 
 ## Statistics by Class:
 ## 
 ##                      Class: A Class: B Class: C Class: D Class: E
-## Sensitivity            1.0000   0.9976   0.9972   0.9954   0.9987
-## Specificity            0.9997   1.0000   1.0000   0.9988   0.9991
-## Pos Pred Value         0.9991   1.0000   1.0000   0.9939   0.9961
-## Neg Pred Value         1.0000   0.9994   0.9994   0.9991   0.9997
-## Prevalence             0.2790   0.2025   0.1738   0.1599   0.1847
-## Detection Rate         0.2790   0.2020   0.1733   0.1592   0.1845
-## Detection Prevalence   0.2793   0.2020   0.1733   0.1602   0.1852
-## Balanced Accuracy      0.9998   0.9988   0.9986   0.9971   0.9989</code></pre>
+## Sensitivity            1.0000   0.9962   0.9973   0.9986   1.0000
+## Specificity            1.0000   0.9997   0.9994   0.9994   0.9997
+## Pos Pred Value         1.0000   0.9987   0.9973   0.9972   0.9987
+## Neg Pred Value         1.0000   0.9991   0.9994   0.9997   1.0000
+## Prevalence             0.2807   0.1917   0.1772   0.1697   0.1808
+## Detection Rate         0.2807   0.1909   0.1767   0.1694   0.1808
+## Detection Prevalence   0.2807   0.1912   0.1772   0.1699   0.1810
+## Balanced Accuracy      1.0000   0.9980   0.9983   0.9990   0.9999</code></pre>
 </div>
 
 
