@@ -7,22 +7,141 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+##Summary
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+This project attempted to build a model to predict the manner in which a person performed an exercise based on data
+drawn from wearable activity monitoring devices (Jawbone, Fitbit, etc.).  A random forest model was selected over 
+other models tested as it had achieved an accuracy of 1 on the test set (later repeated on the validation set).
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+##Data Import, Formatting, and Pre-processing
 
-```{r cars}
-summary(cars)
+The "testing" data set provided was labelled as a validation set to prevent later confusion.
+```{r import}
+trainURL <- url("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv")
+training <- read.csv(trainURL)
+valURL <- url("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv")
+validation <- read.csv(valURL)
+library(caret)
+library(dplyr)
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+The index and username columns were removed.  As the validation set did not have a "classe" result column,
+the problem id was used as a placeholder to keep column names consistent.
+```{r reformat}
+training <- select(training, -X, -user_name)
+validation <- select(validation, -X, -user_name)
+validation <- rename(validation, classe = problem_id)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+The "training" data set was split 70% into a training set to tune the models and 30% into a test set to determine
+the best model fit.
+```{r data partition}
+inTrain <- createDataPartition(y = training$classe, p = 0.7, list = FALSE)
+training <- training[inTrain, ]
+testing <- training[ - inTrain, ]
+```
+
+In the training set, all variables had 0 NA values, or were NA for 13462 cases out of 13737 
+total. As this left approximately 2% of the cases with non-NA values, variables with NA's were dropped. 
+```{r na}
+training <- training[ ,colSums(is.na(training))==0]
+testing <- select(testing, one_of(colnames(training)))
+validation <- select(validation, one_of(colnames(training)))
+```
+
+It was decided to remove predictors with near zero variance to focus on predictors less likely to create
+problems with fitting models.  The filtered data sets were stored seperately so predictors could be added back
+in if necessary to improve accuracy (after any necessary transformations).  The remaining predictors were sufficient
+for good prediction so this did not end up being necessary.
+```{r nearZeroVar}
+nzv <- nearZeroVar(training)
+filterTraining <- training[ , -nzv]
+filterTesting <- testing[ , -nzv]
+filterValidation <- validation[ , -nzv]
+```
+
+
+##Performance optimization
+
+The following code sets up parallel processing and a cross validation control for model training (as opposed to
+the more computationally heavy default bootstrap) in order to help run the code faster.
+```{r parallel}
+library(parallel)
+library(doParallel)
+mycluster <- makeCluster(detectCores() - 1) 
+registerDoParallel(mycluster)
+```
+
+```{r train control}
+
+fitControl <- trainControl(method = "cv",
+                           number = 10,
+                           allowParallel = TRUE)
+```
+
+##Final Model
+*For other models and selection process see next section*
+
+The final model selected was a random forest model based on the filtered training set with all variables with 
+missing values, zero variance or near zero variance and trained using cross-validation with 10 folds.
+```{r rf}
+set.seed(13337)
+rfModel <- train(classe~ ., data = filterTraining, method ="rf", trControl = fitControl)
+
+```
+
+As can be seen in the following confusion matrix, this model perfectly predicted the test set (the 30% data split
+set aside from the "training" csv in order to compare model performance). 
+```{r rf predict}
+rfPredict <- predict(rfModel, filterTesting)
+confusionMatrix(rfPredict, filterTesting$classe)
+```
+
+This model was then used to predict the validation set (derived from the "testing" csv).  When submitted all
+predicted classe values matched the actual values (not shown).
+
+```{r validation}
+quizPredict <- predict(rfModel, validation)
+quizPredict
+```
+
+
+##Other Models and Model Selection
+
+Several models were tested before the final model was selected based on the highest out of sample prediciton 
+accuracy.  Models to be tested were selected based on their usefulness in predicting categorical variables
+(ie a simple lm model would not be ideal) and avoiding highly computationally demanding models (ie lasso models)
+that would not be ideal if a less demanding model could accurately predict the outcome.
+
+
+The models tested were a single classification tree using rpart (more of a baseline than an expected contender), a
+linear descriminate analysis model using lda, a boosted tree model from gbm and the random forest model described
+above.  All models were built with the same cross validation and filtered training set under the caret package.
+
+```{r other models}
+set.seed(457)
+rpartModel <- train(classe~ ., data = filterTraining, method ="rpart", trControl = fitControl)
+
+set.seed(42)
+ldaModel <- train(classe ~ ., data = filterTraining, method = "lda", trcontrol = fitControl)
+
+set.seed(913)
+gbmModel <- train(classe ~ ., data = as.data.frame(filterTraining), method = "gbm", verbose = FALSE)
+```
+
+##Predictions and accuracy from other models
+
+When applied to the test set, the gbm model came close to the prediciton accuracy of the rf model, but random forest 
+was slightly better.
+```{r predictions}
+rpartPredict <- predict(rpartModel, filterTesting)
+ldaPredict <- predict(ldaModel, filterTesting)
+gbmPredict <- predict(gbmModel, filterTesting)
+
+```
+
+```{r accuracy}
+confusionMatrix(rpartPredict, filterTesting$classe)
+confusionMatrix(ldaPredict, filterTesting$classe)
+confusionMatrix(gbmPredict, filterTesting$classe)
+```
